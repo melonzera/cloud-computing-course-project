@@ -1,0 +1,27 @@
+# ============================================================
+# 云计算技术课程设计 — ConfigMap（非敏感配置）
+# 用途：为后端 Pod 注入 Redis 连接信息（通过环境变量 + Volume 两种方式）
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: default
+data:
+  REDIS_HOST: "redis-svc"
+  REDIS_PORT: "6379"
+  APP_ENV: "production"
+---
+# ── 单独用于 Volume 挂载的配置文件 ────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config-file
+  namespace: default
+data:
+  config.json: |
+    {
+      "redis_host": "redis-svc",
+      "redis_port": "6379",
+      "app_env": "production"
+    }

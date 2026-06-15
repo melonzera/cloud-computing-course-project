@@ -1,0 +1,76 @@
+{
+  "dashboard": {
+    "uid": "cloud-computing-course",
+    "title": "云计算课程设计 — CCE 集群监控",
+    "tags": ["course", "k8s", "prometheus"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "节点 CPU 利用率 (%)",
+        "type": "graph",
+        "gridPos": { "h": 10, "w": 12, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [{ "label": "CPU %", "max": 100, "min": 0 }],
+        "description": "各 Worker 节点 CPU 利用率折线图。Prometheus 每 30s 从 Node Exporter Pull 该指标，反映节点计算资源消耗趋势。"
+      },
+      {
+        "id": 2,
+        "title": "各 Pod 内存使用 (MiB)",
+        "type": "bargauge",
+        "gridPos": { "h": 10, "w": 12, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(container_memory_working_set_bytes{namespace=\"default\", container!=\"\"}) by (pod) / 1024 / 1024",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [{ "label": "Memory (MiB)" }],
+        "description": "各 Pod 当前内存使用柱状图。从 kubelet cAdvisor Pull 而来，实时反映容器内存占用。"
+      },
+      {
+        "id": 3,
+        "title": "Pod CPU 使用率 (%)",
+        "type": "graph",
+        "gridPos": { "h": 10, "w": 12, "x": 0, "y": 10 },
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", container!=\"\"}[5m])) by (pod) * 100",
+            "legendFormat": "{{pod}}",
+            "refId": "A"
+          }
+        ],
+        "description": "Pod 级别 CPU 使用率趋势，可用于验证 HPA 触发条件。"
+      },
+      {
+        "id": 4,
+        "title": "集群网络流量 (bytes/s)",
+        "type": "graph",
+        "gridPos": { "h": 10, "w": 12, "x": 12, "y": 10 },
+        "targets": [
+          {
+            "expr": "sum(rate(container_network_transmit_bytes_total{namespace=\"default\"}[5m])) by (pod)",
+            "legendFormat": "TX {{pod}}",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(container_network_receive_bytes_total{namespace=\"default\"}[5m])) by (pod)",
+            "legendFormat": "RX {{pod}}",
+            "refId": "B"
+          }
+        ],
+        "description": "Pod 网络收发流量，用于评估服务间通信开销。"
+      }
+    ]
+  }
+}

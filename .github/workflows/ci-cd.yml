@@ -1,0 +1,95 @@
+# ============================================================
+# 附加题2: CI/CD 流水线 — GitHub Actions
+# 触发条件: Push 到 main 分支
+# 流程: Checkout → Build Image → Push SWR → Deploy to CCE
+# ============================================================
+name: CI/CD Pipeline — Build, Push, Deploy to CCE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  # ── 华为云 SWR 配置 ─────────────────────────────
+  SWR_REGISTRY: swr.cn-north-4.myhuaweicloud.com
+  SWR_ORG: ${{ secrets.SWR_ORG }}
+  # ── 镜像 Tag ────────────────────────────────────
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # ============================================================
+  # Stage 1: 构建 & 推送镜像
+  # ============================================================
+  build-and-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Huawei Cloud SWR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.SWR_REGISTRY }}
+          username: cn-north-4@${{ secrets.HW_ACCESS_KEY }}
+          password: ${{ secrets.HW_SECRET_KEY }}
+
+      - name: Build & Push Backend Image
+        run: |
+          cd part1/backend
+          docker build -t ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:${{ env.IMAGE_TAG }} \
+                     ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:latest
+          docker push ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:latest
+
+      - name: Build & Push Frontend Image
+        run: |
+          cd part1/frontend
+          docker build -t ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:${{ env.IMAGE_TAG }} \
+                     ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:latest
+          docker push ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:${{ env.IMAGE_TAG }}
+          docker push ${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:latest
+
+  # ============================================================
+  # Stage 2: 部署到 CCE (持续部署)
+  # ============================================================
+  deploy-to-cce:
+    name: Deploy to CCE Cluster
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          kubectl version --client
+          kubectl get nodes
+
+      - name: Update Image Tag & Apply Deployment
+        run: |
+          # 更新 Deployment 镜像 Tag
+          kubectl set image deployment/backend \
+            backend=${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/backend:${{ env.IMAGE_TAG }} \
+            -n default
+
+          kubectl set image deployment/frontend \
+            frontend=${{ env.SWR_REGISTRY }}/${{ env.SWR_ORG }}/frontend:${{ env.IMAGE_TAG }} \
+            -n default
+
+      - name: Verify Deployment Rollout
+        run: |
+          kubectl rollout status deployment/backend -n default --timeout=120s
+          kubectl rollout status deployment/frontend -n default --timeout=120s
+          kubectl get pods -n default
+
+      - name: Health Check
+        run: |
+          ELB_IP=$(kubectl get svc backend-svc -n default -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f http://$ELB_IP/api/ping || exit 1
+          echo "✓ Deployment verified — /api/ping returns OK"

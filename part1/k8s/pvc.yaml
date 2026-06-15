@@ -1,0 +1,16 @@
+# ============================================================
+# 云计算技术课程设计 — PVC（持久化存储）
+# 使用华为云 EVS 云硬盘（csi-disk），10Gi，ReadWriteOnce
+# ============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: csi-disk        # 华为云 EVS StorageClass
+  resources:
+    requests:
+      storage: 10Gi

@@ -1,0 +1,26 @@
+# ============================================================
+# 云计算技术课程设计 — HPA 弹性伸缩
+# 监控后端 Pod CPU 利用率，超过 60% 自动扩容
+# 验证命令：
+#   窗口1（监控）：kubectl get pods -n default
+#   窗口2（压测）：ab -n 10000 -c 200 http://<ELB_IP>/api/ping
+# ============================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 1
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60    # CPU 利用率超过 60% 触发扩容

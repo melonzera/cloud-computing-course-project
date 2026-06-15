@@ -1,0 +1,82 @@
+# ============================================================
+# 附加题1: kube-prometheus-stack Helm Values
+# 在 CCE 集群部署 Prometheus + Grafana 监控系统
+# 安装命令:
+#   helm install prometheus ./kube-prometheus-stack/ \
+#     -n monitoring --create-namespace \
+#     -f prometheus-values.yaml
+# ============================================================
+
+# ── Prometheus 配置 ─────────────────────────────────
+prometheus:
+  enabled: true
+  prometheusSpec:
+    # 每 30s Pull 一次指标 (Scrape Interval)
+    scrapeInterval: "30s"
+    # 保留 7 天历史数据
+    retention: "7d"
+    # 使用 PVC 持久化存储
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: csi-disk
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
+
+# ── Grafana 配置 ───────────────────────────────────
+grafana:
+  enabled: true
+  # 预置 Dashboard (自动导入)
+  dashboards:
+    default:
+      node-exporter:
+        gnetId: 1860       # Node Exporter Full (节点监控)
+        revision: 32
+        datasource: Prometheus
+      k8s-pod-monitoring:
+        gnetId: 15760      # Kubernetes Pod Resources
+        revision: 18
+        datasource: Prometheus
+  # 通过 LoadBalancer 暴露 (可选，也可用 Port-Forward)
+  service:
+    type: LoadBalancer
+    annotations:
+      kubernetes.io/elb.class: union
+    port: 80
+  # 管理员密码
+  adminPassword: "admin123"
+  # Grafana 插件
+  plugins:
+    - grafana-piechart-panel
+
+# ── Node Exporter (节点指标采集) ───────────────────
+nodeExporter:
+  enabled: true
+
+# ── kube-state-metrics (K8s 资源状态指标) ──────────
+kubeStateMetrics:
+  enabled: true
+
+# ── AlertManager (告警) ───────────────────────────
+alertmanager:
+  enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'null'
+    receivers:
+      - name: 'null'

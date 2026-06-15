@@ -1,0 +1,46 @@
+# ============================================================
+# 云计算技术课程设计 — Docker Compose 本地联调
+# 启动命令：docker compose up -d
+# 验证命令：curl http://localhost:5000/api/ping
+# 前端访问：http://localhost:80
+# ============================================================
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --requirepass mypassword --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=mypassword
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  redis-data:

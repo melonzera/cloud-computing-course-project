@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Spark temp
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Charts & binaries (keep only source YAML)
+*.tar
+*.tgz
+*.tar.gz
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Report & docs
+实验报告.md
+*.docx
+*.pdf
+
+# Generated images
+*.png
+*.jpg

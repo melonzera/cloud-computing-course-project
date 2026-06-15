@@ -1,0 +1,54 @@
+# ============================================================
+# 云计算技术课程设计 — Redis Deployment
+# 副本数=1，内存限制 ≤ 512Mi，PVC 挂载 /data 持久化
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: default
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command:
+            - redis-server
+            - --requirepass
+            - $(REDIS_PASSWORD)
+            - --appendonly
+            - "yes"
+          ports:
+            - containerPort: 6379
+              name: redis
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "250m"
+              memory: "512Mi"          # ≤ 512Mi，满足任务要求
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data         # Redis 数据持久化目录
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data-pvc
+      restartPolicy: Always

@@ -1,0 +1,60 @@
+# ============================================================
+# 云计算技术课程设计 — 后端 Flask Deployment
+# 副本数=2，ConfigMap Volume 挂载，SecretKeyRef 注入 Redis 密码
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default
+  labels:
+    app: backend
+spec:
+  replicas: 2                        # 副本数 = 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          # ↓ 替换为你的 SWR 镜像地址
+          image: swr.cn-north-4.myhuaweicloud.com/<YOUR_ORG>/backend:v1
+          ports:
+            - containerPort: 5000
+              name: http
+          # ── 环境变量注入 ──────────────────────────
+          envFrom:
+            - configMapRef:
+                name: backend-config       # 注入 REDIS_HOST, REDIS_PORT
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD      # 注入 Redis 密码
+          # ── 资源限制 ─────────────────────────────
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          # ── Volume 挂载 ConfigMap（Task 5） ──────
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config        # 将 ConfigMap 挂载到此目录
+              readOnly: true
+      # ── 定义 Volume（引用 ConfigMap） ────────────
+      volumes:
+        - name: config-volume
+          configMap:
+            name: backend-config-file       # 以文件形式挂载
+            items:
+              - key: config.json
+                path: config.json
+      restartPolicy: Always
