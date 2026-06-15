@@ -30,3 +30,11 @@ Thumbs.db
 # Generated images
 *.png
 *.jpg
+
+# Local demo (not for submission)
+demo-cicd.ps1
+docs/
+
+# Credentials (NEVER commit)
+credentials.csv
+cloud-course-k8s-*-kubeconfig.yaml
