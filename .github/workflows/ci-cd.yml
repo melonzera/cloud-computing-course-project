@@ -38,10 +38,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: "Syntax Check -- Backend"
-        run: python -m py_compile part1/backend/app.py && echo "PASS: Backend syntax OK"
+        run: python -m py_compile part1/backend/app.py && echo "[PASS] Backend syntax OK"
 
       - name: "Import Check -- Backend"
-        run: python -c "import flask; import redis; print('PASS: All dependencies importable')"
+        run: python -c 'import flask; import redis; print("[PASS] All dependencies OK")'
 
       - name: "Syntax Check -- Spark Scripts"
         run: |
