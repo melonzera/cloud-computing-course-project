@@ -1,0 +1,48 @@
+# ============================================================
+# 云计算技术课程设计 — 前端 Nginx Deployment
+# 镜像 Tag 由 CI/CD 流水线自动替换（占位符 __IMAGE_TAG__）
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: default
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          # ↓ CI/CD 自动替换：__SWR_REGISTRY__/__SWR_ORG__/frontend:__IMAGE_TAG__
+          image: __SWR_REGISTRY__/__SWR_ORG__/frontend:latest
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      restartPolicy: Always

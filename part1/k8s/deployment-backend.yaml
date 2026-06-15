@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
         - name: backend
-          # ↓ 替换为你的 SWR 镜像地址
-          image: swr.cn-north-4.myhuaweicloud.com/<YOUR_ORG>/backend:v1
+          # ↓ CI/CD 流水线自动更新镜像 Tag（kubectl set image）
+          image: swr.cn-north-4.myhuaweicloud.com/<YOUR_ORG>/backend:latest
           ports:
             - containerPort: 5000
               name: http
